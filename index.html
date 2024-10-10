@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Markers and Route on HERE Map</title>
+    <!-- HERE Maps JavaScript SDK -->
+    <script src="https://js.api.here.com/v3/3.1/mapsjs-core.js"></script>
+    <script src="https://js.api.here.com/v3/3.1/mapsjs-service.js"></script>
+    <script src="https://js.api.here.com/v3/3.1/mapsjs-ui.js"></script>
+    <script src="https://js.api.here.com/v3/3.1/mapsjs-mapevents.js"></script>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        #mapContainer {
+            width: 100%;
+            height: 100vh; /* Full viewport height */
+        }
+    </style>
+</head>
+<body>
+    <div id="mapContainer"></div>
+    <script>
+        // Initialize HERE Maps API
+        const platform = new H.service.Platform({
+            apikey: 'ACR-fZbAZvsEmJyejgGVdFi-p6QKbf7aCmGeFrlJwKI' // Replace with your HERE Maps API key
+        });
+
+        // Obtain the default map layers
+        const defaultLayers = platform.createDefaultLayers();
+
+        // Initialize the map
+        const map = new H.Map(
+            document.getElementById('mapContainer'),
+            defaultLayers.vector.normal.map,
+            {
+                center: { lat: 15.3402, lng: 73.9511 }, // Center around Don Bosco College of Engineering, Goa
+                zoom: 14,
+                pixelRatio: window.devicePixelRatio || 1,
+            }
+        );
+
+        // Enable map interaction (zoom, pan, etc.)
+        const behavior = new H.mapevents.Behavior(new H.mapevents.MapEvents(map));
+
+        // Create the default UI components for map controls
+        const ui = H.ui.UI.createDefault(map, defaultLayers);
+
+        // Array of coordinates for the markers
+        const coordinates = [
+            { lat: 15.3402, lng: 73.96 }, // Don Bosco College of Engineering
+            { lat: 15.3455, lng: 73.9510 }, // Example location 1
+            { lat: 15.3460, lng: 73.98 }, // Example location 2
+            { lat: 15.3460, lng: 73.99 }, // Additional locations
+            { lat: 15.3460, lng: 73.97 },
+            { lat: 15.34, lng: 73.99 },
+            { lat: 15.35, lng: 73.999 },
+        ];
+
+        // Function to add markers to the map
+        const addMarkers = (coords) => {
+            coords.forEach(coord => {
+                const marker = new H.map.Marker({ lat: coord.lat, lng: coord.lng });
+                map.addObject(marker);
+            });
+        };
+
+        // Add the markers to the map
+        addMarkers(coordinates);
+
+        // Function to calculate the route and draw the path on the map
+        const calculateRoute = (coords) => {
+            // Create a routing service
+            const router = platform.getRoutingService(null, 8);
+            
+            // Construct the routing request parameters
+            const routingParameters = {
+                mode: 'fastest;car',
+                representation: 'display',
+                waypoint0: `geo!${coords[0].lat},${coords[0].lng}`, // First location
+                waypoint1: `geo!${coords[1].lat},${coords[1].lng}`, // Second location
+                waypoint2: `geo!${coords[2].lat},${coords[2].lng}`, // Third location
+                waypoint3: `geo!${coords[3].lat},${coords[3].lng}`, // Fourth location
+                waypoint4: `geo!${coords[4].lat},${coords[4].lng}`, // Fifth location
+                waypoint5: `geo!${coords[5].lat},${coords[5].lng}`, // Sixth location
+                waypoint6: `geo!${coords[6].lat},${coords[6].lng}`, // Seventh location
+                routeattributes: 'waypoints,summary,shape,legs',
+            };
+
+            // Define the callback function to handle the response
+            const onResult = function(result) {
+                if (result.response && result.response.route) {
+                    result.response.route.forEach(route => {
+                        // Get the route shape (the coordinates of the route)
+                        let linestring = new H.geo.LineString();
+
+                        route.shape.forEach(point => {
+                            let parts = point.split(',');
+                            linestring.pushLatLngAlt(parts[0], parts[1]);
+                        });
+
+                        // Create a polyline to display the route on the map
+                        let routeLine = new H.map.Polyline(linestring, {
+                            style: { strokeColor: 'red', lineWidth: 5 } // Route is highlighted in red
+                        });
+
+                        // Add the polyline to the map
+                        map.addObject(routeLine);
+
+                        // Zoom the map to fit the route
+                        map.getViewModel().setLookAtData({
+                            bounds: routeLine.getBoundingBox()
+                        });
+                    });
+                } else {
+                    console.error('No route found:', result);
+                }
+            };
+
+            // Call the routing service to calculate the route
+            router.calculateRoute(routingParameters, onResult, (error) => {
+                console.error('Error calculating route:', error.message);
+            });
+        };
+
+        // Call the function to calculate the route
+        calculateRoute(coordinates);
+    </script>
+</body>
+</html>
